@@ -28,16 +28,19 @@ namespace oatpp { namespace openssl { namespace configurer {
 
 CertificateBuffer::CertificateBuffer(const void *certificateBuffer, int certificateBufferLength)
 {
-  auto buffer = std::shared_ptr<BIO>(BIO_new_mem_buf(certificateBuffer, certificateBufferLength), BIO_free);
-  m_certificate = std::shared_ptr<X509>(PEM_read_bio_X509(buffer.get(), nullptr, nullptr, nullptr), X509_free);
-  if (m_certificate == nullptr) {
+  m_buffer = std::shared_ptr<BIO>(BIO_new_mem_buf(certificateBuffer, certificateBufferLength), BIO_free);
+  if (m_buffer == nullptr) {
     throw std::runtime_error("[oatpp::openssl::configurer::CertificateBuffer::CertificateBuffer()]: Error. "
-                             "'m_certificate' == nullptr.");
+                             "'m_buffer' == nullptr.");
   }
 }
 
 void CertificateBuffer::configure(SSL_CTX *ctx) {
-  if (SSL_CTX_use_certificate(ctx, m_certificate.get()) <= 0) {
+  if (BIO_pending(m_buffer.get()) == 0) {
+    return;
+  }
+  auto m_certificate = std::shared_ptr<X509>(PEM_read_bio_X509(m_buffer.get(), nullptr, nullptr, nullptr), X509_free);
+  if (!SSL_CTX_use_certificate(ctx, m_certificate.get())) {
     throw std::runtime_error("[oatpp::openssl::configurer::CertificateBuffer::configure()]: Error. "
                              "Call to 'SSL_CTX_use_certificate' failed.");
   }

@@ -37,7 +37,7 @@ namespace oatpp { namespace openssl { namespace configurer {
  */
 class CertificateChainBuffer : public ContextConfigurer {
 private:
-    std::shared_ptr<X509> m_chainOfCertificates;
+    std::shared_ptr<BIO> m_buffer;
 public:
 
   /**

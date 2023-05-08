@@ -37,7 +37,7 @@ namespace oatpp { namespace openssl { namespace configurer {
  */
 class PrivateKeyBuffer : public ContextConfigurer {
 private:
-  std::shared_ptr<EVP_PKEY> m_privateKey;
+  std::shared_ptr<BIO> m_buffer;
 public:
 
   /**

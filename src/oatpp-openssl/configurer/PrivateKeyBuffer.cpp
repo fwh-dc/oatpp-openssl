@@ -24,22 +24,27 @@
 
 #include "PrivateKeyBuffer.hpp"
 
+#include "openssl/err.h"
+
 namespace oatpp { namespace openssl { namespace configurer {
 
 PrivateKeyBuffer::PrivateKeyBuffer(const void *privateKeyBuffer, int privateKeyBufferLength)
 {
-  auto buffer = std::shared_ptr<BIO>(BIO_new_mem_buf(privateKeyBuffer, privateKeyBufferLength), BIO_free);
-  m_privateKey = std::shared_ptr<EVP_PKEY>(PEM_read_bio_PrivateKey(buffer.get(), nullptr, nullptr, nullptr), EVP_PKEY_free);
-  if (m_privateKey == nullptr) {
+  m_buffer = std::shared_ptr<BIO>(BIO_new_mem_buf(privateKeyBuffer, privateKeyBufferLength), BIO_free);
+  if (m_buffer == nullptr) {
     throw std::runtime_error("[oatpp::openssl::configurer::PrivateKeyBuffer::PrivateKeyBuffer()]: Error. "
                              "'m_privateKey' == nullptr.");
   }
 }
 
 void PrivateKeyBuffer::configure(SSL_CTX *ctx) {
-  if (SSL_CTX_use_PrivateKey(ctx, m_privateKey.get()) <= 0) {
+  if (BIO_pending(m_buffer.get()) == 0) {
+    return;
+  }
+  auto m_privateKey = std::shared_ptr<RSA>(PEM_read_bio_RSAPrivateKey(m_buffer.get(), nullptr, nullptr, nullptr), RSA_free);
+  if (!SSL_CTX_use_RSAPrivateKey(ctx, m_privateKey.get())) {
     throw std::runtime_error("[oatpp::openssl::configurer::PrivateKeyBuffer::configure()]: Error. "
-                             "Call to 'SSL_CTX_use_PrivateKey' failed.");
+                             "Call to 'SSL_CTX_use_PrivateKey' failed: " + std::string(ERR_error_string(ERR_get_error(), NULL)));
   }
 }
 
